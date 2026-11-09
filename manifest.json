@@ -1,0 +1,18 @@
+{
+  "name": "OBE Tracker — Sistem Ketercapaian CPL",
+  "short_name": "OBE Tracker",
+  "description": "Pemetaan kurikulum OBE, input nilai CPMK, dan laporan ketercapaian CPL & Profil Lulusan.",
+  "id": "./",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#eef2f6",
+  "theme_color": "#112a6a",
+  "lang": "id",
+  "icons": [
+    { "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

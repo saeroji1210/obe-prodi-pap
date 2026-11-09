@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Sistem Ketercapaian CPL OBE</title>
+    <meta name="description" content="Sistem Capaian Pembelajaran Lulusan berbasis Outcome-Based Education: pemetaan kurikulum, input nilai CPMK, dan laporan ketercapaian CPL.">
+    <meta name="theme-color" content="#112a6a">
+    <link rel="manifest" href="./manifest.json">
+    <link rel="icon" type="image/png" href="./icons/icon-192.png">
+    <link rel="apple-touch-icon" href="./icons/icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <!-- Sambungan awal ke server agar permintaan pertama lebih cepat -->
+    <link rel="preconnect" href="https://script.google.com">
+    <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
+    <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- CSS Tailwind terkompilasi (statis, tanpa CDN runtime) -->
+    <link rel="stylesheet" href="./css/app.css">
+    <!-- Konfigurasi (isi GAS_URL) -->
+    <script src="./js/config.js"></script>
+    <!-- Chart.js (versi dikunci, tidak memblokir tampilan) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
+    <script type="module" src="./js/app.js"></script>
+</head>
+<body>
+<noscript><div style="padding:24px;font-family:sans-serif">Aktifkan JavaScript untuk memakai aplikasi ini.</div></noscript>
+
+<!-- GLOBAL LOADING SCREEN -->
+<div id="global-loading" class="fixed inset-0 z-[99999] bg-[#eef2f6] flex flex-col items-center justify-center text-gray-800 transition-opacity duration-300">
+    <div class="bg-white p-10 rounded-3xl card-shadow flex flex-col items-center border border-gray-100 mx-4">
+        <i class="fas fa-server fa-bounce text-5xl text-brand-light mb-6"></i>
+        <h2 class="text-2xl font-extrabold mb-2 text-gray-800 tracking-wide">Menghubungkan Database</h2>
+        <p id="loading-text" class="text-sm text-gray-500 font-medium mb-6 text-center">Menyiapkan aplikasi...</p>
+        <div class="w-56 bg-gray-100 rounded-full h-1.5 overflow-hidden">
+            <div class="bg-gradient-to-r from-brand-blue to-brand-light h-1.5 rounded-full animate-pulse w-full"></div>
+        </div>
+    </div>
+</div>
+
+<!-- BACKGROUND SYNC INDICATOR -->
+<div id="sync-indicator" class="fixed bottom-5 left-5 z-[11000] hidden bg-white/90 backdrop-blur-sm px-4 py-2.5 rounded-full shadow-lg border border-gray-100 flex items-center space-x-2 transition-all duration-300">
+    <i id="sync-icon" class="fas fa-sync-alt fa-spin text-brand-light text-sm"></i>
+    <span id="sync-text" class="text-[10px] sm:text-xs font-bold text-gray-600 tracking-wide">Menyinkronkan ke Cloud...</span>
+</div>
+
+<div id="app-container">
+    <!-- LAYAR LOGIN -->
+    <div id="login-page" class="flex items-center justify-center h-full w-full overflow-hidden hidden bg-brand md:bg-[#eef2f6]">
+        <div class="flex flex-col md:flex-row bg-white md:rounded-[2rem] shadow-2xl overflow-hidden w-full h-full md:w-[90%] md:max-w-5xl md:h-[85vh] md:max-h-[650px] relative z-10">
+            <!-- Left Side (Blue Branding) -->
+            <div class="hidden md:flex flex-col justify-center w-1/2 p-12 text-white relative overflow-hidden bg-gradient-to-br from-brand-blue to-brand-light">
+                <div class="absolute -top-10 -left-10 w-64 h-64 sphere-3d opacity-80"></div>
+                <div class="absolute bottom-10 -left-20 w-80 h-80 sphere-3d z-0"></div>
+                <div class="absolute -bottom-16 right-10 w-56 h-56 sphere-3d z-0"></div>
+                <div class="absolute top-1/4 -right-10 w-32 h-32 sphere-3d opacity-90 z-0"></div>
+                <div class="relative z-10 pl-6">
+                    <div class="w-12 h-12 mb-6 hidden app-brand-icon-login"></div>
+                    <h2 class="text-4xl font-black tracking-widest mb-1 uppercase drop-shadow-md">SISTEM OBE</h2>
+                    <h1 class="text-xl font-bold mb-6 app-brand-name tracking-wide text-blue-50">OBE TRACKER V4</h1>
+                    <p class="text-xs text-blue-100/90 leading-relaxed font-medium max-w-sm app-brand-fakultas">
+                        Sistem Capaian Pembelajaran Lulusan. Platform evaluasi dan monitoring kurikulum berbasis Outcome-Based Education secara real-time.
+                    </p>
+                </div>
+            </div>
+            <!-- Right Side (Login Form) -->
+            <div class="w-full md:w-1/2 p-8 md:p-14 flex flex-col justify-center bg-white relative h-full">
+                <div class="md:hidden absolute top-0 left-0 w-full h-40 bg-gradient-to-br from-brand-blue to-brand-light rounded-b-[3rem] z-0 flex items-center justify-center">
+                    <h2 class="text-3xl font-black tracking-widest text-white uppercase drop-shadow-md">SISTEM OBE</h2>
+                </div>
+                <form id="login-form" class="w-full max-w-sm mx-auto relative z-10 mt-20 md:mt-0" autocomplete="on" onsubmit="event.preventDefault(); handleLogin();">
+                    <div class="text-center md:text-left mb-8">
+                        <h2 class="text-3xl font-extrabold text-gray-900 mb-2 tracking-tight">Sign in</h2>
+                        <p class="text-xs text-gray-400 font-semibold tracking-wide">Masukkan Username dan Password Anda</p>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><i class="fas fa-user text-gray-400 text-sm"></i></div>
+                            <input type="text" id="username" name="username" autocomplete="username" autocapitalize="off" spellcheck="false" class="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-100 rounded-xl text-gray-800 font-semibold focus:ring-2 focus:ring-brand focus:bg-white transition-all outline-none text-sm placeholder-gray-400" placeholder="User Name / NIM / NIDN">
+                        </div>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><i class="fas fa-lock text-gray-400 text-sm"></i></div>
+                            <input type="password" id="password" name="password" autocomplete="current-password" class="w-full pl-11 pr-16 py-3.5 bg-gray-50 border border-gray-100 rounded-xl text-gray-800 font-semibold focus:ring-2 focus:ring-brand focus:bg-white transition-all outline-none text-sm placeholder-gray-400" placeholder="Password">
+                            <button type="button" onclick="togglePasswordDisplay(this)" class="absolute inset-y-0 right-0 pr-4 flex items-center text-xs font-bold text-brand hover:text-brand-light transition">SHOW</button>
+                        </div>
+                        <div id="login-msg" class="text-center text-xs font-bold text-red-500 hidden bg-red-50 py-2.5 px-3 rounded-lg border border-red-100">Username atau password salah!</div>
+                        <button type="submit" id="login-btn" class="w-full bg-brand hover:bg-brand-dark text-white font-bold py-3.5 rounded-xl shadow-lg shadow-brand/30 transition-all duration-300 mt-6 text-sm tracking-wide">Sign in</button>
+                        <p id="demo-note" class="hidden text-center text-[11px] text-amber-600 font-semibold bg-amber-50 border border-amber-200 rounded-lg py-2 px-3">Mode demo (server belum diatur): login <b>admin</b>, <b>19800101</b>, atau <b>2024001</b> dengan password <b>edudigital</b>.</p>
+                    </div>
+                </form>
+            </div>
+            <div class="absolute bottom-0 right-0 w-32 h-32 bg-gradient-to-tl from-brand-light to-brand-blue rounded-tl-[100px] md:block hidden z-0 opacity-90 translate-x-4 translate-y-4"></div>
+        </div>
+    </div>
+
+    <!-- DASHBOARD UTAMA -->
+    <div id="main-dashboard" class="hidden h-full w-full flex flex-col md:flex-row relative overflow-hidden bg-[#eef2f6]">
+        <!-- Mobile Header -->
+        <div class="md:hidden flex items-center justify-between bg-white p-4 border-b border-gray-100 z-20 shadow-sm shrink-0 w-full">
+            <div class="flex items-center space-x-3">
+                <div class="bg-gradient-to-br from-brand-blue to-brand-light p-1.5 rounded-xl shadow-md shadow-brand/20 w-9 h-9 flex items-center justify-center overflow-hidden app-brand-icon">
+                    <i class="fas fa-chart-line text-white text-sm"></i>
+                </div>
+                <span class="font-bold text-lg text-gray-800 app-brand-name line-clamp-1">OBE Panel</span>
+            </div>
+            <button onclick="toggleSidebar()" class="text-gray-400 hover:text-brand focus:outline-none transition-colors p-1" aria-label="Menu">
+                <i class="fas fa-bars text-2xl"></i>
+            </button>
+        </div>
+        <!-- Mobile Overlay -->
+        <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-30 hidden md:hidden transition-opacity duration-300"></div>
+        <!-- Sidebar Dinamis -->
+        <div id="sidebar-container" class="fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-100 -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out flex flex-col h-full shadow-2xl md:shadow-none shrink-0">
+            <div class="p-6 flex items-center justify-between md:justify-start space-x-3 border-b border-gray-50 md:border-none shrink-0">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-gradient-to-br from-brand-blue to-brand-light p-2 rounded-xl shadow-md shadow-brand/20 w-10 h-10 flex items-center justify-center overflow-hidden app-brand-icon shrink-0">
+                        <i class="fas fa-chart-line text-white"></i>
+                    </div>
+                    <span class="font-extrabold text-xl text-gray-800 app-brand-name line-clamp-2 tracking-tight">OBE Panel</span>
+                </div>
+                <button onclick="toggleSidebar()" class="md:hidden text-gray-300 hover:text-red-500 transition-colors p-1" aria-label="Tutup menu">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="flex-1 overflow-y-auto custom-scrollbar pt-2">
+                <nav id="nav-menu" class="space-y-1"></nav>
+            </div>
+            <div class="p-5 border-t border-gray-100 bg-white shrink-0">
+                <div class="flex items-center space-x-3 mb-4 px-2">
+                    <div id="user-avatar" class="w-10 h-10 rounded-full bg-gradient-to-br from-brand-blue to-brand-light flex items-center justify-center font-bold text-white shadow-md shrink-0">U</div>
+                    <div class="overflow-hidden">
+                        <p id="display-name" class="text-sm font-bold truncate text-gray-800">User</p>
+                        <p id="display-role" class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Role</p>
+                    </div>
+                </div>
+                <button id="btn-ubah-pw" onclick="ubahPassword()" class="w-full flex items-center space-x-3 px-4 py-2.5 mb-1 text-gray-500 hover:text-brand hover:bg-brand-soft rounded-xl transition font-semibold text-sm"><i class="fas fa-key"></i><span>Ubah Password</span></button>
+                <button onclick="logout()" class="w-full flex items-center space-x-3 px-4 py-2.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition font-semibold text-sm">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Keluar Sistem</span>
+                </button>
+            </div>
+        </div>
+        <!-- Content Area -->
+        <div id="content-scroll" class="flex-1 overflow-y-auto custom-scrollbar w-full h-full relative p-4 md:p-8">
+            <div class="flex justify-between items-center mb-8">
+                <div>
+                    <h2 id="page-title" class="text-3xl font-extrabold text-gray-900 tracking-tight">Ringkasan Capaian</h2>
+                    <p id="page-desc" class="text-gray-500 text-sm mt-1.5 font-medium">Selamat datang kembali di dashboard Anda.</p>
+                </div>
+            </div>
+            <div id="content-view" class="pb-10"></div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL SYSTEM -->
+<div id="modal-container" class="fixed inset-0 z-[10000] modal-overlay bg-gray-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-lg rounded-[2rem] shadow-2xl overflow-hidden modal-content flex flex-col max-h-[90vh]">
+        <div class="px-8 py-5 border-b border-gray-100 flex justify-between items-center bg-white shrink-0">
+            <h3 id="modal-title" class="font-extrabold text-gray-900 text-lg">Formulir Data</h3>
+            <button id="modal-x" onclick="closeModal()" class="text-gray-300 hover:text-red-500 transition bg-gray-50 hover:bg-red-50 w-8 h-8 rounded-full flex items-center justify-center" aria-label="Tutup"><i class="fas fa-times"></i></button>
+        </div>
+        <div id="modal-body" class="p-8 overflow-y-auto grow custom-scrollbar"></div>
+        <div class="px-8 py-5 bg-gray-50/50 border-t border-gray-100 flex justify-end space-x-3 shrink-0">
+            <button id="modal-cancel" onclick="closeModal()" class="px-5 py-2.5 text-sm font-bold text-gray-500 hover:text-gray-800 transition">Batal</button>
+            <button id="modal-submit" class="bg-brand text-white px-7 py-2.5 rounded-xl text-sm font-bold hover:bg-brand-dark shadow-lg shadow-brand/20 transition tracking-wide disabled:opacity-60">Simpan Data</button>
+        </div>
+    </div>
+</div>
+
+<!-- DIALOG MODAL -->
+<div id="dialog-modal" class="fixed inset-0 z-[12000] modal-overlay bg-gray-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl overflow-hidden modal-content">
+        <div class="p-8 text-center">
+            <div id="dialog-icon" class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-50 mb-5 border border-red-100">
+                <i class="fas fa-exclamation-triangle text-red-500 text-2xl"></i>
+            </div>
+            <h3 id="dialog-title" class="text-xl font-extrabold text-gray-900 mb-2">Konfirmasi</h3>
+            <p id="dialog-message" class="text-sm text-gray-500 font-medium leading-relaxed max-h-[50vh] overflow-y-auto custom-scrollbar">Apakah Anda yakin?</p>
+        </div>
+        <div class="bg-gray-50/50 px-6 py-4 flex flex-col sm:flex-row justify-center sm:space-x-3 w-full border-t border-gray-100 gap-2 sm:gap-0">
+            <button id="dialog-cancel" class="w-full inline-flex justify-center rounded-xl border border-gray-200 shadow-sm px-5 py-2.5 bg-white text-base font-bold text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition focus:outline-none sm:w-auto sm:text-sm">Batal</button>
+            <button id="dialog-confirm" class="w-full inline-flex justify-center rounded-xl border border-transparent shadow-md px-5 py-2.5 bg-red-500 text-base font-bold text-white hover:bg-red-600 transition focus:outline-none sm:w-auto sm:text-sm">Yakin</button>
+        </div>
+    </div>
+</div>
+
+<!-- TOAST NOTIFICATION -->
+<div id="toast" class="fixed bottom-24 md:bottom-10 right-4 md:right-10 left-4 md:left-auto z-[11000] hidden">
+    <div class="bg-brand text-white px-6 py-3.5 rounded-2xl shadow-2xl flex items-center space-x-3 toast-active shadow-brand/30 border border-brand-light/30">
+        <i class="fas fa-check-circle text-brand-light text-lg"></i>
+        <span id="toast-msg" class="text-sm font-bold tracking-wide">Data berhasil diperbarui!</span>
+    </div>
+</div>
+</body>
+</html>
